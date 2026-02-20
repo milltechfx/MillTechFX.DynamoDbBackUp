@@ -1,0 +1,48 @@
+name: License Scanner
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, synchronize]
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check if scan needed
+    runs-on: ubuntu-latest
+    outputs:
+      should-scan: ${{ steps.check.outputs.should-scan }}
+    steps:
+      - name: Determine scan necessity
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Always scan on PR open or ready for review
+          if [[ "${{ github.event.action }}" != "synchronize" ]]; then
+            echo "should-scan=true" >> "$GITHUB_OUTPUT"
+            echo "Scan triggered: PR opened/ready for review"
+            exit 0
+          fi
+
+          # On synchronize, only scan if lock files changed
+          FILES=$(gh pr diff ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} --name-only)
+
+          if echo "$FILES" | grep -qE (package-lock\.json|yarn\.lock|pnpm-lock\.yaml|go\.sum|go\.mod|Cargo\.lock|Gemfile\.lock|composer\.lock|poetry\.lock|Pipfile\.lock|packages\.lock\.json|gradle\.lockfile|\.csproj|packages\.config|pom\.xml|build\.gradle)'; then
+            echo "should-scan=true" >> "$GITHUB_OUTPUT"
+            echo "Scan triggered: lock file changed"
+          else
+            echo "should-scan=false" >> "$GITHUB_OUTPUT"
+            echo "Scan skipped: no lock file changes"
+          fi
+
+  scan:
+    name: License Compliance Scan
+    needs: check
+    if: needs.check.outputs.should-scan == 'true'
+    uses: milltechfx/CI.GitHubActions/.github/workflows/license-scanner.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.COPYLEFTLICENSESCAN_GITHUB_TOKEN }}
