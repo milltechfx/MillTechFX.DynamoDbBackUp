@@ -1,13 +1,10 @@
-name: License Scanner
-
-on:
-  pull_request:
-    types: [opened, ready_for_review, synchronize]
-    branches: [main, master]
-
+name: License Scanner                                                                                                                                                                                                                                             
+on:                                                                                                                                                  
+    pull_request:                                                                                                                                      
+      types: [opened, ready_for_review, synchronize]                                                                                                   
+      branches: [main, master]                                                                                                                         
 permissions:
-  contents: read
-
+    contents: read
 jobs:
   check:
     name: Check if scan needed
@@ -18,16 +15,14 @@ jobs:
       - name: Determine scan necessity
         id: check
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.COPYLEFTLICENSESCAN_GITHUB_TOKEN }}
         run: |
-          # Always scan on PR open or ready for review
           if [[ "${{ github.event.action }}" != "synchronize" ]]; then
             echo "should-scan=true" >> "$GITHUB_OUTPUT"
             echo "Scan triggered: PR opened/ready for review"
             exit 0
           fi
 
-          # On synchronize, only scan if lock files changed
           FILES=$(gh pr diff ${{ github.event.pull_request.number }} \
             --repo ${{ github.repository }} --name-only)
 
@@ -46,3 +41,17 @@ jobs:
     uses: milltechfx/CI.GitHubActions/.github/workflows/license-scanner.yml@main
     secrets:
       GH_TOKEN: ${{ secrets.COPYLEFTLICENSESCAN_GITHUB_TOKEN }}
+
+  license-scan-gate:
+    name: "License Scan Gate"
+    needs: [check, scan]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate result
+        run: |
+          if [[ "${{ needs.scan.result }}" == "failure" ]]; then
+            echo "❌ License scan failed"
+            exit 1
+          fi
+          echo "✅ License scan passed or was correctly skipped"
