@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.13](https://github.com/milltechfx/MillTechFX.DynamoDbBackUp/compare/v1.0.12...v1.0.13) (2026-07-20)
+
+
+### Bug Fixes
+
+* retry unprocessed items on DynamoDB restore instead of dropping them ([cfe6660](https://github.com/milltechfx/MillTechFX.DynamoDbBackUp/commit/cfe6660b53fe045643ae011ae3b4ab0f65b9a54e))
+
 ## [1.0.12](https://github.com/milltechfx/MillTechFX.DynamoDbBackUp/compare/v1.0.11...v1.0.12) (2023-11-23)
 
 
